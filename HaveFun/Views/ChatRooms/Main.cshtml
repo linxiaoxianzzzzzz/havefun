@@ -1,0 +1,314 @@
+﻿<link href="~/css/chat.css" rel="stylesheet" />
+<link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/6.0.5/signalr.min.js"></script>
+<script src="https://unpkg.com/vue@3.4.27/dist/vue.global.js"></script>
+
+<div id="appc">
+    <div class="container">
+        <div class="row clearfix">
+            <div class="col-lg-12">
+                <div class="card chat-app">
+                    <!-- Friend list -->
+                    <div id="plist" class="people-list">
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fa fa-search"></i></span>
+                            </div>
+                            <input type="text" class="form-control" placeholder="搜尋..." v-model="searchQuery">
+                        </div>
+                        <ul class="list-unstyled chat-list mt-2 mb-0">
+                            <li v-for="friend in filteredFriends"
+                                :key="friend.id"
+                                :class="{ 'clearfix': true, 'active': friend.id === activeFriendId }"
+                                @@click="selectFriend(friend)">
+                                <img :src="friend.avatarUrl" @@error="setDefaultAvatar(friend)" alt="avatar">
+                                <div class="about">
+                                    <div class="name">{{ friend.name }}</div>
+                                    <div class="status">
+                                        <i :class="{ 'fa fa-circle': true, 'online': friend.isOnline, 'offline': !friend.isOnline }"></i>
+                                        {{ friend.isOnline ? 'Online' : 'Offline' }}
+                                    </div>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Chat -->
+                    <div class="chat">
+                        <div class="chat-header clearfix">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <a href="javascript:void(0);" data-toggle="modal" data-target="#view_info">
+                                        <img :src="activeFriend ? activeFriend.avatarUrl : '/images/headshots/noheadphoto.png'" @@error="setDefaultAvatar(activeFriend)" alt="avatar">
+                                    </a>
+                                    <div class="chat-about">
+                                        <h6 class="m-b-0">{{ activeFriend ? activeFriend.name : 'Please select a friend' }}</h6>
+                                        <small v-if="activeFriend">
+                                            <i :class="{ 'fa fa-circle': true, 'text-success': activeFriend.isOnline, 'text-secondary': !activeFriend.isOnline }"></i>
+                                            {{ activeFriend.isOnline ? 'Online' : 'Offline' }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-history" ref="chatHistoryList">
+                            <ul class="m-b-0">
+                                <li v-for="chat in sortedChatHistory" :key="chat.id" class="clearfix">
+                                    <div :class="['message-data', chat.senderId === currentUserId ? 'text-right' : '']">
+                                        <span class="message-data-time">{{ formatTime(chat.createTime) }}</span>
+                                    </div>
+                                    <div :class="['message', chat.senderId === currentUserId ? 'my-message float-right' : 'other-message']">
+                                        {{ chat.messageText }}
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div class="chat-message clearfix">
+                            <div class="input-group mb-0">
+                                <div class="input-group-prepend">
+                                    <span id="sendButton" class="input-group-text" @@click="sendMessage"><i class="fa fa-send"></i></span>
+                                </div>
+                                <input type="text" id="messageInput" class="form-control" placeholder="請輸入文字..." v-model="messageText" @@keyup.enter="sendMessage">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script>
+        window.currentUserId = @ViewBag.UserId;
+        const app = Vue.createApp({
+            data() {
+                return {
+                    friends: [],
+                    searchQuery: '',
+                    activeFriendId: null,
+                    activeFriend: null,
+                    chatHistory: [],
+                    messageText: '',
+                    currentUserId: window.currentUserId,
+                    connection: null,
+                    allUserStatuses: [],
+                    isOnline: [],
+                };
+            },
+            computed: {
+                filteredFriends() {
+                    return this.friends.filter(friend =>
+                        friend.name.toLowerCase().includes(this.searchQuery.toLowerCase())
+                    );
+                },
+                sortedChatHistory() {
+                    return [...this.chatHistory].sort((a, b) => new Date(a.createTime) - new Date(b.createTime));
+                }
+            },
+            methods: {
+                setInitialFriend() {
+                    if (this.friends.length > 0) {
+                        this.selectFriend(this.friends[0]);
+                    }
+                },
+                selectFriend(friend) {
+                    if (!friend.isBlocked) {
+                        this.activeFriendId = friend.id;
+                        this.activeFriend = friend;
+                        console.log('Selected friend:', friend);
+                        this.fetchChatHistory();
+                    } else {
+                        console.log('Cannot select blocked friend');
+                    }
+                },
+                async fetchFriends() {
+                    try {
+                        const [friendsResponse, statusesResponse] = await Promise.all([
+                            axios.get(`/api/FriendApi/GetFriend/${this.currentUserId}`),
+                            axios.get(`/api/ChatRoom/ChatRoomsApi/OnlineUserId?userId=${this.currentUserId}`)
+                        ]);
+
+                        const friends = friendsResponse.data;
+                        this.allUserStatuses = statusesResponse.data;
+                        for (id of this.allUserStatuses) {
+                            var f = friends.find(friend => friend.id == id);
+                            if (f != null) {
+                                f.isOnline = "online";
+                            }
+                        }
+
+                        this.friends = friends.map(friend => {
+
+                            return {
+                                id: friend.id,
+                                name: friend.name,
+                                avatarUrl: friend.profilePicture ?
+                                    (friend.profilePicture.startsWith('http') ? friend.profilePicture : `/api/UserInfo/GetPicture/${friend.id}`) :
+                                    '/images/headshots/noheadphoto.png',
+                                isOnline: friend.isOnline,
+                                status: friend.status
+                            };
+                        });
+
+                        this.setInitialFriend();
+                    } catch (error) {
+                        console.error('Failed to fetch friends or statuses:', error);
+                    }
+                },
+                async fetchAllUserStatuses() {
+                    try {
+                        const response = await axios.get('/api/ConId_User/GetAll');
+                        this.allUserStatuses = response.data;
+                        this.updateFriendsOnlineStatus();
+                    } catch (error) {
+                        console.error('Failed to fetch all user statuses:', error);
+                    }
+                },
+                updateFriendsOnlineStatus() {
+                    this.friends.forEach(friend => {
+                        const userStatus = this.allUserStatuses.find(status => status.userId === friend.id);
+                        if (userStatus) {
+                            friend.isOnline = userStatus.isOnline;
+                        }
+                    });
+                },
+                async fetchChatHistory() {
+                    try {
+                        const response = await axios.get(`/api/ChatRoom/ChatRoomsApi/GetAllChatHistory/${this.currentUserId}/${this.activeFriendId}`);
+                        this.chatHistory = response.data.map(message => ({
+                            id: message.id,
+                            senderId: message.user1Id,
+                            senderAvatar: `/api/UserInfo/GetPicture/${message.user1Id}`,
+                            messageText: message.messageText,
+                            createTime: message.createTime
+                        }));
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                        });
+                    } catch (error) {
+                        console.error('Error fetching chat history:', error);
+                    }
+                },
+                formatTime(time) {
+                    return moment(time).format("h:mm A, MMMM D");
+                },
+                async sendMessage() {
+                    if (!this.messageText.trim() || !this.activeFriend) return;
+
+                    const newChat = {
+                        id: Date.now(),
+                        senderId: this.currentUserId,
+                        senderAvatar: `/api/UserInfo/GetPicture/${this.currentUserId}`,
+                        messageText: this.messageText,
+                        createTime: new Date().toISOString()
+                    };
+                    this.chatHistory.push(newChat);
+
+                    try {
+                        await this.connection.invoke("SendMessage", this.currentUserId.toString(), this.activeFriend.id.toString(), this.messageText);
+
+                        const response = await axios.post('/api/ChatRoom/ChatRoomsApi', {
+                            User1Id: this.currentUserId,
+                            User2Id: this.activeFriend.id,
+                            MessageText: this.messageText,
+                            CreateTime: new Date(),
+                            IsRead: false
+                        });
+
+                        console.log('Message saved:', response.data);
+
+                        this.messageText = '';
+                        this.$nextTick(() => {
+                            this.scrollToBottom();
+                        });
+                    } catch (error) {
+                        console.error('Error sending/saving message:', error);
+                    }
+                },
+                scrollToBottom() {
+                    const chatHistory = this.$refs.chatHistoryList;
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                },
+                setupSignalRConnection() {
+                    this.connection = new signalR.HubConnectionBuilder()
+                        .withUrl("/chatHub")
+                        .build();
+
+                    this.connection.on("UserOnline", (userId) => {
+                        this.updateFriendStatus(userId, true);
+                    });
+
+                    this.connection.on("UserOffline", (userId) => {
+                        this.updateFriendStatus(userId, false);
+                    });
+
+                    this.connection.on("ReceiveMessage", (user, message) => {
+                        if (user != this.currentUserId) {
+                            const chat = {
+                                id: Date.now(),
+                                senderId: user,
+                                senderAvatar: `/api/UserInfo/GetPicture/${user}`,
+                                messageText: message,
+                                createTime: new Date().toISOString()
+                            };
+                            this.chatHistory.push(chat);
+                            this.$nextTick(() => {
+                                this.scrollToBottom();
+                            });
+                        }
+                    });
+
+
+                    this.connection.on("SomeOneOnline", (connid) => {
+                        console.log(`Someone connected, ID: ${connid}`);
+                        this.setonline();
+                        this.fetchFriends();
+                    });
+
+                    this.connection.on("SomeOneOffline", (connid) => {
+                        console.log(`Someone disconnected, ID: ${connid}`);
+                        this.fetchFriends();
+                    });
+
+                    this.connection.start().catch(err => console.error(err.toString()));
+                },
+                async setonline() {
+                    try {
+                        const response = await axios.get(`/api/ChatRoom/ChatRoomsApi/OnlineUserId?userId=${this.currentUserId}`);
+                        if (response.data) {
+                            this.isOnline = response.data;
+                            this.updateFriendsOnlineStatus();
+                        } else {
+                            this.isOnline = [];
+                            this.updateFriendsOnlineStatus();
+                        }
+                    } catch (error) {
+                        console.error('Failed to update status:', error);
+                        this.isOnline = false;
+                        this.updateFriendsOnlineStatus();
+                    }
+                },
+                setDefaultAvatar(friend) {
+                    friend.avatarUrl = '/images/headshots/noheadphoto.png';
+                }
+            },
+            mounted() {
+                this.fetchFriends();
+                this.fetchAllUserStatuses();
+                this.setupSignalRConnection();
+
+            },
+            beforeUnmount() {
+                if (this.connection) {
+                    this.connection.stop();
+                }
+            }
+        }).mount('#appc');
+    </script>
+}

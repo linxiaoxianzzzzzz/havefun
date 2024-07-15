@@ -1,0 +1,714 @@
+﻿@section Styles
+{
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<link href="~/lib/font-awesome/css/all.min.css" rel="stylesheet" />
+
+	<style>
+		
+
+		#out {
+			/* outline: 2px solid red; */
+			display: flex;
+			justify-content: center;
+			height: 100%;
+			margin: 0 auto;
+			position: relative;
+			padding: 80px;
+		}
+
+
+		#card-container {
+			border: 2px solid white;
+			border-radius: 25px;
+			position: relative;
+			width: 90%;
+			height: 550px; /* 500px */
+			padding: 10px;
+		}
+
+		.collapseCard {
+			margin-top: 25px;
+		}
+
+		.cards {
+			/* outline: 2px solid blue; */
+
+			height: 500px;
+			width: 90%;
+			left: 0;
+			right: 0;
+			top: 0px;
+			bottom: 0;
+			margin: auto;
+			position: absolute;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			transition: transform 0.5s ease, opacity 0.3s ease;
+			user-select: none;
+		}
+
+		.cards.dragging {
+			transition: none;
+		}
+
+		.card-text {
+			display: -webkit-box;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+			-webkit-line-clamp: 3;
+		}
+
+		.card-body {
+			display: flex;
+			flex-direction: column;
+		}
+
+		.carousel-inner {
+			height: 300px;
+		}
+
+		.buttons {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			margin: auto;
+			z-index: 999;
+		}
+
+		.card img {
+			width: 100%;
+			height: auto;
+		}
+
+		.carousel-indicators {
+			position: absolute;
+			top: 0;
+			right: 0;
+			bottom: auto;
+		}
+
+		.buttons .btn {
+			height: 60px;
+			width: 60px;
+			border-radius: 50%;
+		}
+
+		.label{
+			display: inline-block;
+			background-color: #007bff; 
+			color: white; 
+			padding: 5px 10px; 
+			margin: 5px; 
+			border-radius: 15px; 
+			font-size: 14px; 
+			font-weight: 500; 
+			box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
+			transition: background-color 0.3s ease;
+		}
+
+		.label:hover{
+				background-color: #0056b3;
+		}
+
+		.button-container {
+			position: relative;
+		}
+
+		.top-right-button {
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			background-color: transparent;
+			border: none;
+			cursor: pointer;
+			z-index: 999;
+		}
+
+	</style>
+}
+
+
+<div id="matchApp">
+	<div class="banner p-3 bg_img" style="background-image: url(assets/images/banner/bg.jpg); /* outline: 2px solid yellow; */">
+		<div class="container" @* style="outline:2px solid blue;" *@>
+			<div class="row">
+				<div class="col-lg-5 col-12 out">
+					<div class="banner__content wow fadeInUp" data-wow-duration="1.5s" data-wow-delay=".5s" style="margin-top: 80px;">
+						<div class="banner__title">
+							<h2>找到你的真愛</h2>
+							<p>只需點擊一下就可與您的完美伴侶進行認真的約會</p>
+						</div>
+						<div class="banner__form">
+								<div class="banner__list">
+									<label>正在尋找</label>
+									<div class="row">
+										<div class="col-6">
+											<label class="banner__inputlist" for="male2">
+												<input type="radio" id="male2" name="me2" class="male" value="0" v-model="filter.gender">
+												<span>男性</span>
+												<span class="banner__inputlist--icon"><i class="fa-solid fa-mars"></i></span>
+											</label>
+										</div>
+										<div class="col-6">
+											<label class="banner__inputlist" for="female2">
+												<input type="radio" id="female2" name="me2" class="female" value="1" v-model="filter.gender">
+												<span>女性</span>
+												<span class="banner__inputlist--icon"><i class="fa-solid fa-venus"></i></span>
+											</label>
+										</div>
+									</div>
+								</div>
+								<div class="banner__list">
+									<label>年齡</label>
+									<div class="row">
+										<div class="col-6">
+											<label>最小: {{filter.age.min}}</label>
+											<div class="form-control">
+												<input type="number" v-model.number="filter.age.min"/>
+											</div>
+										</div>
+										<div class="col-6">
+											<label>最大: {{filter.age.max}}</label>
+											<div class="form-control">
+												<input type="number" v-model.number="filter.age.max"/>
+											</div>
+										</div>
+									</div>
+								</div>
+								<div class="banner__list">
+									@* <label>Country</label>
+									<div class="row">
+									<div class="col-12">
+									<div class="banner__inputlist">
+									<select id="country" name="country">
+									<option value="Afganistan">Afghanistan</option>
+									<option value="Albania">Albania</option>
+									<option value="Algeria">Algeria</option>
+									<option value="American Samoa">American Samoa</option>
+									</select>
+									</div>
+									</div>
+									</div> *@
+								</div>
+								<button type="submit" class="default-btn reverse d-block mt-5" v-on:click="applyFilter"><span>尋找你的伴侶</span></button>
+							
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-7 col-12">
+					<div id="out" class="wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="1s">
+						<div id="card-container">
+							<div v-for="(user, index) in filteredNotMatchUsers" :id="user.id" class="card cards" :style="{'z-index': index}" @@mousedown="startDrag($event, index)"
+								 @@touchstart="startDrag($event, index)">
+								<div class="button-container">
+									<button class="top-right-button" data-bs-toggle="modal" data-bs-target="#staticBackdrop"><i class="fa-solid fa-circle-exclamation" style="color: #ff3838;" @@click="setCurrentCard($event.target)"></i></button>
+								</div>
+								<div :id="`carouselExampleIndicators${index}`" class="carousel slide">
+									<div class="carousel-indicators">	
+										<button v-for="(btn,btnIndex) in user.pictures" type="button" :data-bs-target="`#carouselExampleIndicators${index}`" :data-bs-slide-to="btnIndex" :class="{'active': btnIndex == 0 }" aria-current="true" :aria-label="`Slide ${btnIndex + 1}`"></button>
+										@* <button type="button" :data-bs-target="`#carouselExampleIndicators${index}`" class="active" data-bs-slide-to="0" aria-label="Slide 1"></button>
+										<button type="button" :data-bs-target="`#carouselExampleIndicators${index}`" data-bs-slide-to="1" aria-label="Slide 2"></button>
+										<button type="button" :data-bs-target="`#carouselExampleIndicators${index}`" data-bs-slide-to="2" aria-label="Slide 3"></button> *@
+									</div>									
+									<div class="carousel-inner">										
+										<div v-for="(pic,picIndex) in user.pictures" class="carousel-item" :class="{'active': picIndex == 0 }">
+											<img :src="pic.picture.replace('~', '')" class="d-block w-100" alt="..." draggable="false">
+										</div>
+										@* <div class="carousel-item active">
+										<img src="@Url.Content(ViewBag.ImageUrlArr[0])" class="d-block w-100" alt="..." draggable="false">
+										</div>										
+										<div class="carousel-item">
+											<img src="@Url.Content(ViewBag.ImageUrlArr[1])" class="d-block w-100" alt="..." draggable="false">
+										</div>
+										<div class="carousel-item">
+											<img src="@Url.Content(ViewBag.ImageUrlArr[2])" class="d-block w-100" alt="..." draggable="false">
+										</div> *@
+									</div>
+									<button class="carousel-control-prev" type="button" :data-bs-target="`#carouselExampleIndicators${index}`" data-bs-slide="prev">
+										<span class="carousel-control-prev-icon" aria-hidden="true"></span>
+										<span class="visually-hidden">Previous</span>
+									</button>
+									<button class="carousel-control-next" type="button" :data-bs-target="`#carouselExampleIndicators${index}`" data-bs-slide="next">
+										<span class="carousel-control-next-icon" aria-hidden="true"></span>
+										<span class="visually-hidden">Next</span>
+									</button>
+								</div>
+								<div class="card-body">
+									<h5 class="card-title">{{user.name}} <i class="fa-solid fa-mars" style="color: #74C0FC;" v-if="user.gender==0"></i><i class="fa-solid fa-venus" style="color: #ff7ace;" v-else></i> {{user.age}} <i class="fa-brands fa-web-awesome" style="color: #FFD43B;" v-if="user.level==1"></i></h5>
+									<p class="card-text">{{user.introduction}}</p>
+									<button :id="`btnCollapse${index}`" :data-bs-target="`#collapseExample${index}`" class="btn btn-primary detail" type="button" data-bs-toggle="collapse" aria-expanded="false" :aria-controls="`collapseExample${index}`">Detail<i class="fa-solid fa-angle-down"></i></button>
+									<div class="collapse collapsing" :id="`collapseExample${index}`">
+										<div class="card card-body collapseCard">									      <h6>我的標籤</h6>
+											<div v-for="(labels,category) in uniqueLabel(user)">
+												<h6>{{category}}</h6>			
+												<span v-for="label in labels" class="label">#{{ label }}</span>
+											</div>											
+										</div>
+										
+									</div>
+								</div>
+							</div>
+
+						</div>
+						@* <div class="d-flex justify-content-around buttons" style="width: 500px;">
+							<button id="dislike-button" class="btn btn-secondary"><i class="fa-solid fa-xmark fa-shake" @@click="dislike"></i></button>
+							<button class="btn btn-light"><i class="fa-regular fa-star fa-bounce"></i></button>
+							<button id="like-button" class="btn btn-danger"><i class="fa-regular fa-heart fa-beat" @@click="like"></i></button>
+						</div> *@
+						
+					</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal -->
+	<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="staticBackdropLabel">檢舉</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<h6>檢舉理由:</h6>
+					<select v-model="selectedComplaintCategory">
+						<option disabled value="">請選擇...</option>
+						<option v-for="category in complaintCategories" :key="category.complaintCategoryId" :value="category.complaintCategoryId">{{ category.complaintCategoryName }}</option>
+					</select>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+					<button type="button" class="btn btn-primary" @@click="reportUser">確認</button>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+@section Scripts
+{
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.7.2/axios.min.js" integrity="sha512-JSCFHhKDilTRRXe9ak/FJ28dcpOJxzQaCd3Xg8MyF6XFjODhy/YMCM8HW0TFDckNHWUewW+kfvhin43hKtJxAw==" crossorigin="anonymous" referrerpolicy="no-referrer" asp-append-version="true"></script>
+
+	<script>
+		const today = new Date();
+		const matchApp = Vue.createApp({
+			data() {
+				return {
+					baseAddress: "https://localhost:7152",
+					notMatchUsers: [],
+					filteredNotMatchUsers: [],
+					startX: 0,
+					startY: 0,
+					currentCard: null,
+					filter: {
+						gender:"",
+						age: {
+							min:"",
+							max:"",
+						},
+					},
+					today: new Date(),
+					labels:[],
+					complaintCategories:[],
+					selectedComplaintCategory:'',
+					canSwipe: true,
+					lastChecked:null,
+				}
+			},
+			computed: {
+				filterGender() {
+					let temp = this.notMatchUsers;
+					if (this.filter.gender != "") {
+						return this.notMatchUsers.filter(u => u.gender == this.filter.gender);
+					}
+					return temp;
+				},
+				filterAge() { 
+					let temp = this.filterGender;
+					if (this.filter.age.min != "") { 
+						temp = temp.filter(u => u.age >= Number(this.filter.age.min));
+					}
+					if (this.filter.age.max != "") {
+						temp = temp.filter(u => u.age <= Number(this.filter.age.max));
+					}
+					return temp;
+				},
+				
+			},
+			methods: {
+				getNotMatchUsers() {
+					fetch(`/api/MatchApi/@ViewBag.UserId`)
+						.then(res => res.json())
+						.then(u => this.notMatchUsers = u)
+						.then(()=>this.applyFilter())
+				},
+				getComplaintCategories() {
+					axios.get(`/api/MatchApi/GetComplaintCategory`)
+						.then(response => this.complaintCategories = response.data)
+						.catch(err => alert(err));
+				},
+				startDrag(event, index) {
+					this.currentCard = event.target.closest('.cards');
+					this.startX = event.touches ? event.touches[0].clientX : event.clientX;
+					this.startY = event.touches ? event.touches[0].clientY : event.clientY;
+					this.currentCard.classList.add('dragging');
+					document.addEventListener('mousemove', this.onDrag);
+					document.addEventListener('touchmove', this.onDrag);
+					document.addEventListener('mouseup', this.endDrag);
+					document.addEventListener('touchend', this.endDrag);
+				},
+				onDrag(event) {
+					if (!this.currentCard) return;
+
+					let clientX = event.touches ? event.touches[0].clientX : event.clientX;
+					let clientY = event.touches ? event.touches[0].clientY : event.clientY;
+					let dx = clientX - this.startX;
+					let dy = clientY - this.startY;
+
+					this.currentCard.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.05}deg)`;
+				},
+				async endDrag(event) {
+					if (!this.currentCard) return;
+
+					this.currentCard.classList.remove('dragging');
+					document.removeEventListener('mousemove', this.onDrag);
+					document.removeEventListener('touchmove', this.onDrag);
+					document.removeEventListener('mouseup', this.endDrag);
+					document.removeEventListener('touchend', this.endDrag);
+
+					let endX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+					let dx = endX - this.startX;
+
+					if (dx > 100) {
+						if (!this.canSwipe) {
+							Swal.fire({
+								icon: "error",
+								title: "抱歉",
+								text: "已達到上限!",
+								footer: '<a href="/MemberLevel">是否升級會員等級?</a>'
+							});
+							this.currentCard.style.transform = '';
+							return;
+						}
+						this.currentCard.style.transform = `translate(100vw, 0)`;
+						setTimeout(() => {
+							//console.log(this.currentCard.id);
+							this.likeRequest(@ViewBag.UserId, this.currentCard.id);
+							this.notMatchUsers = this.notMatchUsers.filter(u => u.id != this.currentCard.id);
+							this.currentCard = null;
+							
+						}, 500);
+						await this.swipeHistoryRequest(@ViewBag.UserId);
+						await this.canUserSwipeRequest();
+					} else if (dx < -100) {
+						if (!this.canSwipe) {
+							Swal.fire({
+								icon: "error",
+								title: "抱歉",
+								text: "已達到上限!",
+								footer: '<a href="/MemberLevel">是否升級會員等級?</a>'
+							});
+							this.currentCard.style.transform = '';
+							return;
+						}
+						this.currentCard.style.transform = `translate(-100vw, 0)`;
+						setTimeout(() => {
+							//console.log(this.currentCard.id);
+							this.dislikeRequest(@ViewBag.UserId, this.currentCard.id);
+							this.notMatchUsers = this.notMatchUsers.filter(u => u.id != this.currentCard.id);
+							this.currentCard = null;
+						}, 500);
+						await this.swipeHistoryRequest(@ViewBag.UserId);
+						await this.canUserSwipeRequest();
+					} else {
+						this.currentCard.style.transform = '';
+					}
+					
+				},
+				showDetail() {
+					var div = $(".buttons");
+					var currentPosition = div.css('position');
+					if (currentPosition === 'absolute') {
+						div.css('position', 'fixed');
+
+					} else if (currentPosition === 'fixed') {
+						div.css('position', 'absolute');
+					}
+				},
+				// like() {
+				// 	const currentCard = document.querySelectorAll('.cards:not(.liked):not(.disliked)');
+				// 	if (currentCard.length) {
+				// 		currentCard[currentCard.length - 1].style.transform = `translate(100vw, 0)`;
+				// 		currentCard[currentCard.length - 1].classList.add('liked');
+
+				// 		setTimeout(() => {
+				// 			this.notMatchUsers.pop();
+				// 		}, 300);
+
+				// 	}
+				// 	var div = $(".buttons");
+				// 	div.css('position', 'absolute');
+				// },
+				// dislike() {
+				// 	const currentCard = document.querySelectorAll('.cards:not(.liked):not(.disliked)');
+				// 	if (currentCard.length) {
+				// 		currentCard[currentCard.length - 1].style.transform = `translate(-100vw, 0)`;
+				// 		currentCard[currentCard.length - 1].classList.add('disliked');
+
+				// 		setTimeout(() => {
+				// 			this.notMatchUsers.pop();
+				// 		}, 300);
+				// 	}
+				// 	var div = $(".buttons");
+				// 	div.css('position', 'absolute');
+				// },
+				uniqueLabel(user) { 
+					const labelMap = new Map();
+					user.labels.forEach(label => { 
+						if (!labelMap.has(label.category.name)) { 
+							labelMap.set(label.category.name, []);
+						}
+						labelMap.get(label.category.name).push(label.name);
+					});
+					//console.log(labelMap);
+					return Object.fromEntries(labelMap);
+				},
+				likeRequest(clickedId, beenClickedId) 
+				{
+					let request = {};
+					request.clicked = clickedId;
+					request.beenClicked = beenClickedId;
+					axios.post(`/api/MatchApi/Like`, request)
+						.then(response => { 
+							if (response.data != "") {
+								Swal.fire({
+									title: '恭喜!',
+									text: '配對成功!',
+									icon: 'success',
+								});
+							}
+						})
+						.catch(err => { 
+							alert(err);
+						});
+				},
+				dislikeRequest(clickedId, beenClickedId) {
+					let request = {};
+					request.clicked = clickedId;
+					request.beenClicked = beenClickedId;
+					axios.post(`/api/MatchApi/Dislike`, request)
+						.then(response => {
+						})
+						.catch(err => {
+							alert(err);
+						});
+				},
+				async canUserSwipeRequest() {
+					const response = await fetch(`/api/MatchApi/CanUserSwipe/@ViewBag.UserId`);
+					const data = await response.json();
+					this.canSwipe = data;
+				},
+				async swipeHistoryRequest(userId) 
+				{					
+					await axios.post(`/api/MatchApi/PostSwipeHistory/${userId}`)
+						.then(response => {
+						})
+						.catch(err => {
+							alert(err);
+						});
+				},
+				setCurrentCard(target) 
+				{
+					this.currentCard = target.closest('.cards');
+				},
+				reportUser() 
+				{
+					axios.post(`/api/MatchApi/ReportUser`,{
+						reportUserId: @ViewBag.UserId,
+						complaintCategoryId: this.selectedComplaintCategory,
+						beReportedUserId: this.currentCard.id
+					})
+					.then(response => {
+						Swal.fire({
+							title: '恭喜!',
+							text: response.data,
+							icon: 'success',
+						});
+						var modalElement = document.getElementById('staticBackdrop');
+						var modal = bootstrap.Modal.getInstance(modalElement);
+						modal.hide();
+						
+						this.notMatchUsers = this.notMatchUsers.filter(u => u.id != this.currentCard.id);
+						this.currentCard = null;
+						this.applyFilter();
+					})
+					.catch(error => {
+						Swal.fire({
+							title: '錯誤!',
+							text: error.response.data,
+							icon: 'error',
+						});
+						var modalElement = document.getElementById('staticBackdrop');
+						var modal = bootstrap.Modal.getInstance(modalElement);
+						modal.hide();
+					});
+					
+				},
+				toggleRadio: function (event) {
+					const value = event.target.value;
+					if (this.filter.gender == value) {
+						this.filter.gender = "";
+					}
+					else {
+						this.filter.gender = value;
+					}
+					this.lastChecked = value;
+				},
+				applyFilter() { 
+					let users = this.notMatchUsers;
+
+					if (this.filter.gender != "") {
+						users = users.filter(u => u.gender == this.filter.gender);
+					}
+
+					if (this.filter.age.max != "") {
+						users = users.filter(u => u.age <= Number(this.filter.age.max));
+					}
+
+					if (this.filter.age.min != "") {
+						users = users.filter(u => u.age >= Number(this.filter.age.min));
+					}
+
+					this.filteredNotMatchUsers = users;
+				},
+			},
+			watch: {
+				'filter.gender': function (newVal, oldVal) {
+					if (newVal === "") {
+						this.$nextTick(() => {
+							document.querySelectorAll('input[type="radio"]').forEach(radio => {
+								radio.checked = false;
+							});
+						});
+					}
+				}
+			},
+			mounted() {
+				this.getNotMatchUsers();
+				this.getComplaintCategories();
+				this.canUserSwipeRequest();
+				document.querySelectorAll('input[type="radio"]').forEach(radio => {
+					radio.addEventListener('click', this.toggleRadio);
+				});
+			},
+		}).mount("#matchApp");
+	</script>
+
+	@* <script>
+		// 選取所有卡片元素
+		const cards = document.querySelectorAll('.cards');
+		console.log(cards);
+		let startX, startY, currentCard;
+
+		// 為每張卡片添加事件監聽器
+		cards.forEach(card => {
+			card.addEventListener('mousedown', startDrag);
+			card.addEventListener('touchstart', startDrag);
+
+			// 開始拖動時觸發的函數
+			function startDrag(event) {
+				currentCard = card;
+				startX = event.touches ? event.touches[0].clientX : event.clientX;
+				startY = event.touches ? event.touches[0].clientY : event.clientY;
+				card.classList.add('dragging');
+
+				// 添加全局事件監聽器
+				document.addEventListener('mousemove', onDrag);
+				document.addEventListener('touchmove', onDrag);
+				document.addEventListener('mouseup', endDrag);
+				document.addEventListener('touchend', endDrag);
+			}
+
+			// 拖動過程中觸發的函數
+			function onDrag(event) {
+				if (!currentCard) return;
+
+				// 計算拖動距離
+				let clientX = event.touches ? event.touches[0].clientX : event.clientX;
+				let clientY = event.touches ? event.touches[0].clientY : event.clientY;
+				let dx = clientX - startX;
+				let dy = clientY - startY;
+
+				// 更新卡片的位置和旋轉角度
+				currentCard.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx * 0.05}deg)`;
+			}
+
+			// 結束拖動時觸發的函數
+			function endDrag(event) {
+				if (!currentCard) return;
+
+				// 計算拖動的最終距離
+				let endX = event.changedTouches ? event.changedTouches[0].clientX : event.clientX;
+				let dx = endX - startX;
+
+				// 根據拖動距離決定卡片的去向
+				if (dx > 100) {
+					// 向右滑動，表示喜歡
+					currentCard.style.transform = `translate(100vw, 0)`;
+				} else if (dx < -100) {
+					// 向左滑動，表示不喜歡
+					currentCard.style.transform = `translate(-100vw, 0)`;
+				} else {
+					// 返回原位置
+					currentCard.style.transform = '';
+				}
+
+				// 移除拖動樣式和事件監聽器
+				currentCard.classList.remove('dragging');
+				document.removeEventListener('mousemove', onDrag);
+				document.removeEventListener('touchmove', onDrag);
+				document.removeEventListener('mouseup', endDrag);
+				document.removeEventListener('touchend', endDrag);
+
+				currentCard = null;
+			}
+		});
+
+		function showDetail() {
+			var div = $(".buttons");
+			var currentPosition = div.css('position');
+			if (currentPosition === 'absolute') {
+				div.css('position', 'fixed');
+
+			} else if (currentPosition === 'fixed') {
+				div.css('position', 'absolute');
+			}
+		}
+
+		$(".detail").on("click", showDetail);
+
+		const likeButton = document.getElementById('like-button');
+		likeButton.addEventListener('click', () => {
+			const currentCard = document.querySelectorAll('.cards:not(.liked):not(.disliked)');
+			if (currentCard.length) {
+				currentCard[currentCard.length - 1].style.transform = `translate(100vw, 0)`;
+				currentCard[currentCard.length - 1].classList.add('liked');
+			}
+			var div = $(".buttons");
+			div.css('position', 'absolute');
+		});
+
+		const dislikeButton = document.getElementById('dislike-button');
+		dislikeButton.addEventListener('click', () => {
+			const currentCard = document.querySelectorAll('.cards:not(.liked):not(.disliked)');
+			if (currentCard.length) {
+				currentCard[currentCard.length - 1].style.transform = `translate(-100vw, 0)`;
+				currentCard[currentCard.length - 1].classList.add('disliked');
+			}
+			var div = $(".buttons");
+			div.css('position', 'absolute');
+		});
+	</script> *@
+}
